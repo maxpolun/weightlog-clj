@@ -28,9 +28,9 @@
                              (request :post "/login") 
                              (body {:email "test@test.com"
                                     :password "testpassword1"})))
-              json-map (json/read-str (:body response)
-                                      :value-fn (read-as-date #{"created_at"})]
-          (is (some #("bad_login") (:errors json-map))))))))
+              json-map (json/read-str (:body response))
+              _ (println json-map)]
+          (is (some #(= % "bad_login") (get json-map "errors")))))))
 
   (testing "not-found route"
     (let [response (app (request :get "/invalid"))]

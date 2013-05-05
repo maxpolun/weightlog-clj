@@ -12,15 +12,16 @@
 
 (defn- -write-ts-json 
   [ts #^java.io.PrintWriter out]
-  (.print out (timestamp-as-iso ts)))
+  (.print out (str "\"" (timestamp-as-iso ts) "\"")))
 
 (extend java.sql.Timestamp json/JSONWriter
         {:-write -write-ts-json})
 (extend java.util.UUID json/JSONWriter
         {:-write (fn [uuid  #^java.io.PrintWriter out]
-                   (.print out (.toString uuid)))})
+                   (.print out (str "\""(.toString uuid) "\"")))})
 
 (defn json-error [status map]
+  (println status map)
   {:status status
    :headers {"Content-Type" "application/json"}
    :body (json/write-str map)})
@@ -30,23 +31,18 @@
        :headers {"Content-Type" "application/json"}
        :body (json/write-str map)}))
 
-(defn read-as-date [keyset]
-  (fn [key val]
-    (if (contains? keyset key) (java.sql.Date/valueOf value))))
-
-
 (defn login 
   [email password]
   (let [u (data/user-by-email email)
         valid (data/auth-user u password)]
-    (if valid 
-      {:errors [:bad_login]})))
+    (if valid {:session (data/create-session u) :errors []}
+    {:errors [:bad_login]})))
   
 
-(defroutes app-routes
-  (GET "/" [] (json-response {:login "/login"}))
-  (POST "/login" [email password] (json-response (login email password)))
-  (route/not-found (json/write-str {:errors ["not-found"]})))
+  (defroutes app-routes
+    (GET "/" [] (json-response {:login "/login"}))
+    (POST "/login" [email password] (json-response (login email password)))
+    (route/not-found (json/write-str {:errors ["not-found"]})))
 
 (def app
   (handler/api app-routes))
